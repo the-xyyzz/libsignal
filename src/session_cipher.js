@@ -68,7 +68,8 @@ class SessionCipher {
         return await this.queueJob(async () => {
             const record = await this.getRecord();
             if (!record) {
-                throw new errors.SessionError("No sessions");
+                // we dont have session
+                return null;
             }
             const session = record.getOpenSession();
             if (!session) {
@@ -166,7 +167,8 @@ class SessionCipher {
         return await this.queueJob(async () => {
             const record = await this.getRecord();
             if (!record) {
-                throw new errors.SessionError("No session record");
+                // we dont have session
+                return null;
             }
             const result = await this.decryptWithSessions(data, record.getSessions());
             const remoteIdentityKey = result.session.indexInfo.remoteIdentityKey;
