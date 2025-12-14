@@ -79,7 +79,7 @@ exports.calculateSignature = function(privKey, message) {
     if (!message) {
         throw new Error("Invalid message");
     }
-    return Buffer.from(curve25519Rust.sign(privKey, message));
+    return Buffer.from(curve25519.sign(privKey, message));
 };
 
 exports.verifySignature = function(pubKey, msg, sig, isInit) {
