@@ -3,6 +3,7 @@
 
 const curve25519 = require('../src/curve25519_wrapper');
 const nodeCrypto = require('crypto');
+const curve25519Rust = require('libsignal-plugins');
 
 
 function validatePrivKey(privKey) {
@@ -27,12 +28,11 @@ function scrubPubKeyFormat(pubKey) {
     if (pubKey.byteLength == 33) {
         return pubKey.subarray(1);
     } else {
-        console.error("WARNING: Expected pubkey of length 33, please report the ST and client that generated the pubkey");
         return pubKey;
     }
 }
 
-exports.createKeyPair = function(privKey) {
+exports.createKeyPairDeprecated = function(privKey) {
     validatePrivKey(privKey);
     const keys = curve25519.keyPair(privKey);
     // prepend version byte
@@ -45,8 +45,18 @@ exports.createKeyPair = function(privKey) {
         privKey: Buffer.from(keys.privKey)
     };
 };
+exports.createKeyPair = function(privKey) {
+    const keys = curve25519Rust.keyPair(privKey);
+    const version = Buffer.alloc(33);
+    version[0] = 5;
+    keys.pubKey.copy(version, 1);
+    return {
+        pubKey: version,
+        privKey: keys.privKey
+    };
+};
 
-exports.calculateAgreement = function(pubKey, privKey) {
+exports.calculateAgreementDeprecated = function(pubKey, privKey) {
     pubKey = scrubPubKeyFormat(pubKey);
     validatePrivKey(privKey);
     if (!pubKey || pubKey.byteLength != 32) {
@@ -54,13 +64,22 @@ exports.calculateAgreement = function(pubKey, privKey) {
     }
     return Buffer.from(curve25519.sharedSecret(pubKey, privKey));
 };
+exports.calculateAgreement = function(pubKey, privKey) {
+    pubKey = scrubPubKeyFormat(pubKey);
+    validatePrivKey(privKey);
+    if (!pubKey || pubKey.byteLength != 32) {
+        throw new Error("Invalid public key");
+    }
+    return curve25519Rust.sharedSecret(pubKey, privKey);
+};
+
 
 exports.calculateSignature = function(privKey, message) {
     validatePrivKey(privKey);
     if (!message) {
         throw new Error("Invalid message");
     }
-    return Buffer.from(curve25519.sign(privKey, message));
+    return Buffer.from(curve25519Rust.sign(privKey, message));
 };
 
 exports.verifySignature = function(pubKey, msg, sig, isInit) {
@@ -77,7 +96,11 @@ exports.verifySignature = function(pubKey, msg, sig, isInit) {
     return isInit ? true : curve25519.verify(pubKey, msg, sig);
 };
 
-exports.generateKeyPair = function() {
+
+exports.generateKeyPairDeprecated = function() {
     const privKey = nodeCrypto.randomBytes(32);
     return exports.createKeyPair(privKey);
+};
+exports.generateKeyPair = function() {
+    return curve25519Rust.generateKeyPair();
 };
